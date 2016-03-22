@@ -885,7 +885,7 @@ public class KCP
             }
             else if (interval_ < 10)
             {
-                interval_ = 0;
+                interval_ = 10;
             }
             interval = (UInt32)interval_;
         }
