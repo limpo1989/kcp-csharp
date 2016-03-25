@@ -856,7 +856,7 @@ public class KCP
             interval_ = 5000;
         }
         else if (interval_ < 10) {
-            interval_ = 0;
+            interval_ = 10;
         }
         interval = (UInt32)interval_;
         return 0;
