@@ -720,7 +720,7 @@ public class KCP
                 segment.una = rcv_nxt;
 
                 var need = IKCP_OVERHEAD + segment.data.Length;
-                if (offset + need >= mtu) {
+                if (offset + need > mtu) {
                     output(buffer, offset);
                     //Array.Clear(buffer, 0, offset);
                     offset = 0;
