@@ -153,8 +153,8 @@ namespace Network_Kcp
             HandleRecvQueue();
 
             if (m_NeedKcpUpdateFlag || currentTimeMS >= m_NextKcpUpdateTime) {
-                m_Kcp.Update((uint)currentTimeMS);
-                m_NextKcpUpdateTime = m_Kcp.Check((uint)currentTimeMS);
+                m_Kcp.Update(currentTimeMS);
+                m_NextKcpUpdateTime = m_Kcp.Check(currentTimeMS);
                 m_NeedKcpUpdateFlag = false;
             }
         }

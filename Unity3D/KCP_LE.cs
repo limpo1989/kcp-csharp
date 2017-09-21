@@ -748,8 +748,9 @@ namespace Network_Kcp
         // update state (call it repeatedly, every 10ms-100ms), or you can ask
         // ikcp_check when to call it again (without ikcp_input/_send calling).
         // 'current' - current timestamp in millisec.
-        public void Update(UInt32 current_) {
-
+        public void Update(long current_L_) {
+            UInt32 current_ = (UInt32)current_L_;
+            
             current = current_;
 
             if (0 == updated) {
@@ -779,8 +780,9 @@ namespace Network_Kcp
         // Important to reduce unnacessary ikcp_update invoking. use it to
         // schedule ikcp_update (eg. implementing an epoll-like mechanism,
         // or optimize ikcp_update when handling massive kcp connections)
-        public UInt32 Check(UInt32 current_) {
-
+        public UInt32 Check(long current_L_) {
+            UInt32 current_ = (UInt32)current_L_;
+            
             if (0 == updated) return current_;
 
             var ts_flush_ = ts_flush;
