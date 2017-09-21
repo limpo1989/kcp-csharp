@@ -323,10 +323,10 @@ public class KCP
 
         for (var i = 0; i < count; i++) {
             var size = 0;
-            if (buffer.Length > mss)
+            if (buffer.Length - offset > mss)
                 size = (int)mss;
             else
-                size = buffer.Length;
+                size = buffer.Length - offset;
 
             var seg = new Segment(size);
             Array.Copy(buffer, offset, seg.data, 0, size);
@@ -720,7 +720,7 @@ public class KCP
                 segment.una = rcv_nxt;
 
                 var need = IKCP_OVERHEAD + segment.data.Length;
-                if (offset + need >= mtu) {
+                if (offset + need > mtu) {
                     output(buffer, offset);
                     //Array.Clear(buffer, 0, offset);
                     offset = 0;
