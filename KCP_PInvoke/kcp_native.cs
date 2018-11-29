@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
-namespace IRobotQ.Net.Common {
+namespace KCP.NetWrapper {
     class kcp_native {
 #if UNITY_IOS
         const string KCPDLL="__Internal";
