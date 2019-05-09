@@ -304,7 +304,6 @@ namespace KcpProject
                 // copy fragment data into buffer.
                 Buffer.BlockCopy(seg.data.RawBuffer, seg.data.ReaderIndex, buffer, n, seg.data.ReadableBytes);
                 n += seg.data.ReadableBytes;
-                seg.data.ReaderIndex += seg.data.ReadableBytes;
 
                 count++;
                 Segment.Put(seg);
@@ -919,7 +918,6 @@ namespace KcpProject
                     writeIndex += segment.encode(buffer, writeIndex);
                     Buffer.BlockCopy(segment.data.RawBuffer, segment.data.ReaderIndex, buffer, writeIndex, segment.data.ReadableBytes);
                     writeIndex += segment.data.ReadableBytes;
-                    segment.data.ReaderIndex += segment.data.ReadableBytes;
 
                     if (segment.xmit >= dead_link)
                     {
