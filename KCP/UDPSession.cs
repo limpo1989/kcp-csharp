@@ -108,24 +108,20 @@ namespace KcpProject
             }
             mRecvBuffer.Clear();
 
-            var size = mKCP.PeekSize();
-            if (size > 0) {
-                // 外部缓存足够时， 直接写入
-                if (length > size) {
-                    return mKCP.Recv(data, index, length);
-                }
+            // 读完所有完整的消息
+            for (;;) {
+                var size = mKCP.PeekSize();
+                if (size <= 0) break;
 
-                // 使用内部缓存
                 mRecvBuffer.EnsureWritableBytes(size);
-                var n = mKCP.Recv(mRecvBuffer.RawBuffer, mRecvBuffer.WriterIndex, size);
-                if (n > 0) {
-                    mRecvBuffer.WriterIndex += n;
-                }
 
-                // 余下部分，下次接受
-                Buffer.BlockCopy(mRecvBuffer.RawBuffer, mRecvBuffer.ReaderIndex, data, index, length);
-                mRecvBuffer.ReaderIndex += length;
-                return length;
+                var n = mKCP.Recv(mRecvBuffer.RawBuffer, mRecvBuffer.WriterIndex, size);
+                if (n > 0) mRecvBuffer.WriterIndex += n;
+            }
+
+            // 有数据待接收
+            if (mRecvBuffer.ReadableBytes > 0) {
+                return Recv(data, index, length);
             }
 
             return 0;
