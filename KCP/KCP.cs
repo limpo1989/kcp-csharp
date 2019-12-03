@@ -306,8 +306,9 @@ namespace KcpProject
                 n += seg.data.ReadableBytes;
 
                 count++;
+                var fragment = seg.frg;
                 Segment.Put(seg);
-                if (0 == seg.frg) break;
+                if (0 == fragment) break;
             }
 
             if (count > 0)
