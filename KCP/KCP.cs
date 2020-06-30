@@ -232,6 +232,8 @@ namespace KcpProject
         // send windowd & recv window
         public UInt32 SndWnd { get { return snd_wnd; } }
         public UInt32 RcvWnd { get { return rcv_wnd; } }
+        public UInt32 RmtWnd { get { return rmt_wnd; } }
+        public UInt32 Mss { get { return mss; } }
 
         // get how many packet is waiting to be sent
         public int WaitSnd { get { return snd_buf.Count + snd_queue.Count; } }
@@ -371,7 +373,6 @@ namespace KcpProject
         public int Send(byte[] buffer, int index, int length)
         {
             if (0 == length) return -1;
-            var readIndex = index;
 
             if (stream != 0)
             {
@@ -383,20 +384,21 @@ namespace KcpProject
                     {
                         var capacity = (int)(mss - seg.data.ReadableBytes);
                         var writen = Math.Min(capacity, length);
-                        readIndex += writen;
                         seg.data.WriteBytes(buffer, index, writen);
+                        index += writen;
+                        length -= writen;
                     }
                 }
             }
 
-            if (length - readIndex == 0)
+            if (length == 0)
                 return 0;
 
             var count = 0;
-            if (length - readIndex <= mss)
+            if (length <= mss)
                 count = 1;
             else
-                count = (int)(((length - readIndex) + mss - 1) / mss);
+                count = (int)(((length) + mss - 1) / mss);
 
             if (count > 255) return -2;
 
@@ -404,11 +406,12 @@ namespace KcpProject
 
             for (var i = 0; i < count; i++)
             {
-                var size = Math.Min(length - readIndex, (int)mss);
+                var size = Math.Min(length, (int)mss);
 
                 var seg = Segment.Get(size);
-                seg.data.WriteBytes(buffer, readIndex, size);
-                readIndex += size;
+                seg.data.WriteBytes(buffer, index, size);
+                index += size;
+                length -= size;
 
                 seg.frg = (stream == 0 ? (byte)(count - i - 1) : (byte)0);
                 snd_queue.Add(seg);
@@ -1129,6 +1132,11 @@ namespace KcpProject
             reserved = reservedSize;
             mss = mtu - IKCP_OVERHEAD - (uint)(reservedSize);
             return true;
+        }
+
+        public void SetStreamMode(bool enabled)
+        {
+            stream = enabled ? 1 : 0;
         }
     }
 }

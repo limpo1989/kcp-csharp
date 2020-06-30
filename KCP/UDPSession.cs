@@ -17,6 +17,7 @@ namespace KcpProject
 
         public bool IsConnected { get { return mSocket != null && mSocket.Connected; } }
         public bool WriteDelay { get; set; }
+        public bool AckNoDelay { get; set; }
 
         public IPEndPoint RemoteAddress { get; private set; }
         public IPEndPoint LocalAddress { get; private set; }
@@ -34,6 +35,7 @@ namespace KcpProject
             // fast2:   1, 20, 2, 1
             // fast3:   1, 10, 2, 1
             mKCP.NoDelay(0, 30, 2, 1);
+            mKCP.SetStreamMode(true);
             mRecvBuffer.Clear();
         }
 
@@ -58,19 +60,25 @@ namespace KcpProject
             if (mSocket == null)
                 return -1;
 
-            if (mKCP.WaitSnd >= mKCP.SndWnd || length == 0) {
-                return 0;
+            var waitsnd = mKCP.WaitSnd;
+            if (waitsnd < mKCP.SndWnd && waitsnd < mKCP.RmtWnd) {
+
+                var sendBytes = 0;
+                do {
+                    var n = Math.Min((int)mKCP.Mss, length - sendBytes);
+                    mKCP.Send(data, index + sendBytes, n);
+                    sendBytes += n;
+                } while (sendBytes < length);
+
+                waitsnd = mKCP.WaitSnd;
+                if (waitsnd >= mKCP.SndWnd || waitsnd >= mKCP.RmtWnd || !WriteDelay) {
+                    mKCP.Flush(false);
+                }
+
+                return length;
             }
-
-            mNextUpdateTime = 0;
-
-            if (mKCP.Send(data, index, length) != 0)
-                return -2;
-
-            if (mKCP.WaitSnd >= mKCP.SndWnd || !WriteDelay) {
-                mKCP.Flush(false);
-            }
-            return length;
+            
+            return 0;
         }
 
         public int Recv(byte[] data, int index, int length)
@@ -107,7 +115,7 @@ namespace KcpProject
             }
             mRecvBuffer.WriterIndex += rn;
 
-            var inputN = mKCP.Input(mRecvBuffer.RawBuffer, mRecvBuffer.ReaderIndex, mRecvBuffer.ReadableBytes, true, true);
+            var inputN = mKCP.Input(mRecvBuffer.RawBuffer, mRecvBuffer.ReaderIndex, mRecvBuffer.ReadableBytes, true, AckNoDelay);
             if (inputN < 0) {
                 mRecvBuffer.Clear();
                 return inputN;
