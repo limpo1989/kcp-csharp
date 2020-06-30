@@ -11,7 +11,7 @@ namespace KcpProject.Sample
         static void Main(string[] args)
         {
             var connection = new UDPSession();
-            connection.Connect("192.168.212.137", 4444);
+            connection.Connect("127.0.0.1", 4444);
 
             var firstSend = true;
             var buffer = new byte[1024];
@@ -41,6 +41,8 @@ namespace KcpProject.Sample
 
                 var resp = Encoding.UTF8.GetString(buffer, 0, n);
                 Console.WriteLine("Received Message: " + resp);
+
+
             }
         }
     }

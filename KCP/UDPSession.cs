@@ -18,11 +18,16 @@ namespace KcpProject
         public bool IsConnected { get { return mSocket != null && mSocket.Connected; } }
         public bool WriteDelay { get; set; }
 
+        public IPEndPoint RemoteAddress { get; private set; }
+        public IPEndPoint LocalAddress { get; private set; }
+
         public void Connect(string host, int port)
         {
             var endpoint = IPAddress.Parse(host);
             mSocket = new Socket(endpoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
             mSocket.Connect(endpoint, port);
+            RemoteAddress = (IPEndPoint)mSocket.RemoteEndPoint;
+            LocalAddress = (IPEndPoint)mSocket.LocalEndPoint;
             mKCP = new KCP((uint)(new Random().Next(1, Int32.MaxValue)), rawSend);
             // normal:  0, 40, 2, 1
             // fast:    0, 30, 2, 1
@@ -53,18 +58,19 @@ namespace KcpProject
             if (mSocket == null)
                 return -1;
 
-            if (mKCP.WaitSnd >= mKCP.SndWnd) {
+            if (mKCP.WaitSnd >= mKCP.SndWnd || length == 0) {
                 return 0;
             }
 
             mNextUpdateTime = 0;
 
-            var n = mKCP.Send(data, index, length);
+            if (mKCP.Send(data, index, length) != 0)
+                return -2;
 
             if (mKCP.WaitSnd >= mKCP.SndWnd || !WriteDelay) {
                 mKCP.Flush(false);
             }
-            return n;
+            return length;
         }
 
         public int Recv(byte[] data, int index, int length)
@@ -92,7 +98,7 @@ namespace KcpProject
             try {
                 rn = mSocket.Receive(mRecvBuffer.RawBuffer, mRecvBuffer.WriterIndex, mRecvBuffer.WritableBytes, SocketFlags.None);
             } catch(Exception ex) {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex);
                 rn = -1;
             }
             

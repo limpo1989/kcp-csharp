@@ -1179,35 +1179,22 @@ namespace KcpProject
         /// </summary>
         public void Dispose()
         {
-            if (isPool)
-            {
-                lock (pool)
-                {
-                    if (pool.Count < poolMaxCount)
-                    {
+            if (isPool) {
+                lock (pool) {
+                    if (pool.Count < poolMaxCount) {
                         this.Clear();
                         pool.Add(this);
-                    }
-                    else
-                    {
-                        readIndex = 0;
-                        writeIndex = 0;
-                        markReadIndex = 0;
-                        markWirteIndex = 0;
-                        capacity = 0;
-                        buf = null;
+                        return;
                     }
                 }
             }
-            else
-            {
-                readIndex = 0;
-                writeIndex = 0;
-                markReadIndex = 0;
-                markWirteIndex = 0;
-                capacity = 0;
-                buf = null;
-            }
+
+            readIndex = 0;
+            writeIndex = 0;
+            markReadIndex = 0;
+            markWirteIndex = 0;
+            capacity = 0;
+            buf = null;
         }
     }
 }
