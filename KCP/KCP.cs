@@ -432,6 +432,7 @@ namespace KcpProject
             else
             {
                 Int32 delta = (Int32)((UInt32)rtt - rx_srtt);
+                rx_srtt += (UInt32)(delta >> 3);
                 if (0 > delta) delta = -delta;
 
                 if (rtt < rx_srtt - rx_rttval)
@@ -439,11 +440,11 @@ namespace KcpProject
                     // if the new RTT sample is below the bottom of the range of
                     // what an RTT measurement is expected to be.
                     // give an 8x reduced weight versus its normal weighting
-                    rx_rttval += ((uint)delta - rx_rttval) >> 5;
+                    rx_rttval += (uint)((delta - rx_rttval) >> 5);
                 }
                 else
                 {
-                    rx_rttval += ((uint)delta - rx_rttval) >> 2;
+                    rx_rttval += (uint)((delta - rx_rttval) >> 2);
                 }
             }
 
