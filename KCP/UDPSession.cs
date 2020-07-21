@@ -24,7 +24,12 @@ namespace KcpProject
 
         public void Connect(string host, int port)
         {
-            var endpoint = IPAddress.Parse(host);
+            IPHostEntry hostEntry = Dns.GetHostEntry(host);
+            if (hostEntry.AddressList.Length == 0)
+            {
+                throw new Exception("Unable to resolve host: " + host);
+            }
+            var endpoint = hostEntry.AddressList[0];
             mSocket = new Socket(endpoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
             mSocket.Connect(endpoint, port);
             RemoteAddress = (IPEndPoint)mSocket.RemoteEndPoint;
@@ -77,7 +82,7 @@ namespace KcpProject
 
                 return length;
             }
-            
+
             return 0;
         }
 
@@ -109,7 +114,7 @@ namespace KcpProject
                 Console.WriteLine(ex);
                 rn = -1;
             }
-            
+
             if (rn <= 0) {
                 return rn;
             }
