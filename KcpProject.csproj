@@ -31,6 +31,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -40,12 +43,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="common\kcp.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="KCP\ByteBuffer.cs" />
+    <Compile Include="KCP\KCP.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="common\switch_queue.cs" />
-    <Compile Include="v1\udp_socket_v1.cs" />
-    <Compile Include="v2\udp_socket_v2.cs" />
+    <Compile Include="Sample\Main.cs" />
+    <Compile Include="KCP\UDPSession.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
