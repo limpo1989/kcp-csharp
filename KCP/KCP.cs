@@ -207,7 +207,7 @@ namespace KcpProject
         UInt32 conv; UInt32 mtu; UInt32 mss; UInt32 state;
         UInt32 snd_una; UInt32 snd_nxt; UInt32 rcv_nxt;
         UInt32 ts_recent; UInt32 ts_lastack; UInt32 ssthresh;
-        UInt32 rx_rttval; UInt32 rx_srtt;
+        Int32 rx_rttval; Int32 rx_srtt;
         UInt32 rx_rto; UInt32 rx_minrto;
         UInt32 snd_wnd; UInt32 rcv_wnd; UInt32 rmt_wnd; UInt32 cwnd; UInt32 probe;
         UInt32 interval; UInt32 ts_flush;
@@ -426,13 +426,13 @@ namespace KcpProject
             // https://tools.ietf.org/html/rfc6298
             if (0 == rx_srtt)
             {
-                rx_srtt = (UInt32)rtt;
-                rx_rttval = (UInt32)rtt >> 1;
+                rx_srtt = rtt;
+                rx_rttval = rtt >> 1;
             }
             else
             {
-                Int32 delta = (Int32)((UInt32)rtt - rx_srtt);
-                rx_srtt += (UInt32)(delta >> 3);
+                Int32 delta = rtt - rx_srtt;
+                rx_srtt += (delta >> 3);
                 if (0 > delta) delta = -delta;
 
                 if (rtt < rx_srtt - rx_rttval)
@@ -440,16 +440,16 @@ namespace KcpProject
                     // if the new RTT sample is below the bottom of the range of
                     // what an RTT measurement is expected to be.
                     // give an 8x reduced weight versus its normal weighting
-                    rx_rttval += (uint)((delta - rx_rttval) >> 5);
+                    rx_rttval += ((delta - rx_rttval) >> 5);
                 }
                 else
                 {
-                    rx_rttval += (uint)((delta - rx_rttval) >> 2);
+                    rx_rttval += ((delta - rx_rttval) >> 2);
                 }
             }
 
-            var rto = (int)(rx_srtt + _imax_(interval, rx_rttval << 2));
-            rx_rto = _ibound_(rx_minrto, (UInt32)rto, IKCP_RTO_MAX);
+            uint rto = (uint)(rx_srtt) + _imax_(interval, (uint)(rx_rttval) << 2);
+            rx_rto = _ibound_(rx_minrto, rto, IKCP_RTO_MAX);
         }
 
         void shrink_buf()
@@ -495,7 +495,7 @@ namespace KcpProject
             }
         }
 
-        void parse_una(UInt32 una)
+        int parse_una(UInt32 una)
         {
             var count = 0;
             foreach (var seg in snd_buf)
@@ -510,6 +510,7 @@ namespace KcpProject
 
             if (count > 0)
                 snd_buf.RemoveRange(0, count);
+            return count;
         }
 
         void ack_push(UInt32 sn, UInt32 ts)
@@ -587,6 +588,7 @@ namespace KcpProject
             UInt32 latest = 0;
             int flag = 0;
             UInt64 inSegs = 0;
+            bool windowSlides = false;
 
             while (true)
             {
@@ -633,7 +635,10 @@ namespace KcpProject
                     rmt_wnd = wnd;
                 }
 
-                parse_una(una);
+                if (parse_una(una) > 0) {
+                    windowSlides = true;
+                }
+
                 shrink_buf();
 
                 if (IKCP_CMD_ACK == cmd)
@@ -731,8 +736,11 @@ namespace KcpProject
                 }
             }
 
-            // ack immediately
-            if (ackNoDelay && acklist.Count > 0)
+            if (windowSlides)   // if window has slided, flush
+            {
+                Flush(false);
+            }
+            else if (ackNoDelay && acklist.Count > 0) // // ack immediately
             {
                 Flush(true);
             }
@@ -1087,7 +1095,7 @@ namespace KcpProject
         public int NoDelay(int nodelay_, int interval_, int resend_, int nc_)
         {
 
-            if (nodelay_ > 0)
+            if (nodelay_ >= 0)
             {
                 nodelay = (UInt32)nodelay_;
                 if (nodelay_ != 0)
