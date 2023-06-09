@@ -130,7 +130,7 @@ namespace KcpProject
             // 读完所有完整的消息
             for (;;) {
                 var size = mKCP.PeekSize();
-                if (size <= 0) break;
+                if (size < 0) break;
 
                 mRecvBuffer.EnsureWritableBytes(size);
 
