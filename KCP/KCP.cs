@@ -241,6 +241,24 @@ namespace KcpProject
         // internal time.
         public UInt32 CurrentMS { get { return currentMS(); } }
 
+        // log
+        Action<string> writelog = null;
+
+        public const Int32 IKCP_LOG_OUTPUT = 1;
+        public const Int32 IKCP_LOG_INPUT = 2;
+        public const Int32 IKCP_LOG_SEND = 4;
+        public const Int32 IKCP_LOG_RECV = 8;
+        public const Int32 IKCP_LOG_IN_DATA = 16;
+        public const Int32 IKCP_LOG_IN_ACK = 32;
+        public const Int32 IKCP_LOG_IN_PROBE = 64;
+        public const Int32 IKCP_LOG_IN_WINS = 128;
+        public const Int32 IKCP_LOG_OUT_DATA = 256;
+        public const Int32 IKCP_LOG_OUT_ACK = 512;
+        public const Int32 IKCP_LOG_OUT_PROBE = 1024;
+        public const Int32 IKCP_LOG_OUT_WINS = 2048;
+        public const Int32 IKCP_LOG_FLUSH_TIME = 4096;
+        public Int32 logmask;
+
         // create a new kcp control object, 'conv' must equal in two endpoint
         // from the same connection.
         public KCP(UInt32 conv_, Action<byte[], int> output_)
@@ -322,6 +340,12 @@ namespace KcpProject
 
                 count++;
                 var fragment = seg.frg;
+
+                if (ikcp_canlog(IKCP_LOG_RECV))
+                {
+                    ikcp_log($"recv sn={seg.sn}");
+                }
+
                 Segment.Put(seg);
                 if (0 == fragment) break;
             }
@@ -590,6 +614,12 @@ namespace KcpProject
             UInt64 inSegs = 0;
             bool windowSlides = false;
 
+            if (ikcp_canlog(IKCP_LOG_INPUT))
+            {
+                ikcp_log($"[RI] {size} bytes");
+            }
+
+
             while (true)
             {
                 UInt32 ts = 0;
@@ -597,6 +627,7 @@ namespace KcpProject
                 UInt32 length = 0;
                 UInt32 una = 0;
                 UInt32 conv_ = 0;
+                UInt32 current = currentMS();
 
                 UInt16 wnd = 0;
                 byte cmd = 0;
@@ -647,9 +678,19 @@ namespace KcpProject
                     parse_fastack(sn, ts);
                     flag |= 1;
                     latest = ts;
+
+                    if (ikcp_canlog(IKCP_LOG_IN_ACK))
+                    {
+                        ikcp_log($" input ack: sn={sn} ts={ts} rtt={_itimediff(current, ts)} rto={rx_rto}");
+                    }
                 }
                 else if (IKCP_CMD_PUSH == cmd)
                 {
+                    if (ikcp_canlog(IKCP_LOG_IN_DATA))
+                    {
+                        ikcp_log($" input psh: sn={sn} ts={ts}");
+                    }
+
                     var repeat = true;
                     if (_itimediff(sn, rcv_nxt + rcv_wnd) < 0)
                     {
@@ -674,10 +715,19 @@ namespace KcpProject
                     // ready to send back IKCP_CMD_WINS in Ikcp_flush
                     // tell remote my window size
                     probe |= IKCP_ASK_TELL;
+
+                    if (ikcp_canlog(IKCP_LOG_IN_PROBE))
+                    {
+                        ikcp_log(" input probe");
+                    }
                 }
                 else if (IKCP_CMD_WINS == cmd)
                 {
                     // do nothing
+                    if (ikcp_canlog(IKCP_LOG_IN_WINS))
+                    {
+                        ikcp_log($" input wins: {wnd}");
+                    }
                 }
                 else
                 {
@@ -770,6 +820,10 @@ namespace KcpProject
             {
                 if (writeIndex + space > mtu)
                 {
+                    if (ikcp_canlog(IKCP_LOG_OUTPUT))
+                    {
+                        ikcp_log($"[RO] {writeIndex} bytes");
+                    }
                     output(buffer, writeIndex);
                     writeIndex = reserved;
                 }
@@ -779,6 +833,10 @@ namespace KcpProject
             {
                 if (writeIndex > reserved)
                 {
+                    if (ikcp_canlog(IKCP_LOG_OUTPUT))
+                    {
+                        ikcp_log($"[RO] {writeIndex} bytes");
+                    }
                     output(buffer, writeIndex);
                 }
             };
@@ -793,6 +851,11 @@ namespace KcpProject
                     seg.sn = ack.sn;
                     seg.ts = ack.ts;
                     writeIndex += seg.encode(buffer, writeIndex);
+
+                    if (ikcp_canlog(IKCP_LOG_OUT_ACK))
+                    {
+                        ikcp_log($"output ack: sn={seg.sn}");
+                    }
                 }
             }
             acklist.Clear();
@@ -946,6 +1009,11 @@ namespace KcpProject
                     {
                         state = 0xFFFFFFFF;
                     }
+
+                    if (ikcp_canlog(IKCP_LOG_OUT_DATA))
+                    {
+                        ikcp_log($"output psh: sn={segment.sn} ts={segment.ts} resendts={segment.resendts} rto={segment.rto} fastack={segment.fastack}, xmit={segment.xmit}");
+                    }
                 }
 
                 // get the nearest rto
@@ -1021,6 +1089,11 @@ namespace KcpProject
                 if (_itimediff(current, ts_flush) >= 0)
                     ts_flush = current + interval;
                 Flush(false);
+
+                if (ikcp_canlog(IKCP_LOG_FLUSH_TIME))
+                {
+                    ikcp_log($"flush time: {current}");
+                }
             }
         }
 
@@ -1146,6 +1219,27 @@ namespace KcpProject
         public void SetStreamMode(bool enabled)
         {
             stream = enabled ? 1 : 0;
+        }
+
+        bool ikcp_canlog(int mask)
+        {
+            if ((mask & logmask) == 0 || writelog == null) return false;
+            return true;
+        }
+
+        public void SetLogger(Action<string> logger)
+        {
+            writelog = logger;
+        }
+
+        public void SetLogMask(int mask)
+        {
+            logmask = mask;
+        }
+
+        void ikcp_log(string logStr)
+        {
+            writelog?.Invoke(logStr);
         }
     }
 }

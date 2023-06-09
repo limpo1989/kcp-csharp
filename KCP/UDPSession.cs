@@ -22,6 +22,9 @@ namespace KcpProject
         public IPEndPoint RemoteAddress { get; private set; }
         public IPEndPoint LocalAddress { get; private set; }
 
+        private DateTime startDt = DateTime.Now;
+        const int logmask = KCP.IKCP_LOG_IN_ACK | KCP.IKCP_LOG_OUT_ACK | KCP.IKCP_LOG_IN_DATA | KCP.IKCP_LOG_OUT_DATA;
+
         public void Connect(string host, int port)
         {
             IPHostEntry hostEntry = Dns.GetHostEntry(host);
@@ -41,6 +44,11 @@ namespace KcpProject
             // fast3:   1, 10, 2, 1
             mKCP.NoDelay(0, 30, 2, 1);
             mKCP.SetStreamMode(true);
+
+            // Log
+            //mKCP.SetLogger(Log);
+            //mKCP.SetLogMask(logmask);
+
             mRecvBuffer.Clear();
         }
 
@@ -156,6 +164,13 @@ namespace KcpProject
                 mKCP.Update();
                 mNextUpdateTime = mKCP.Check();
             }
+        }
+
+        public void Log(string str)
+        {
+            DateTime now = DateTime.Now;
+            int t = (int)(now - startDt).TotalMilliseconds;
+            Console.WriteLine($"[{t.ToString().PadLeft(10, ' ')}] {str}");
         }
     }
 }
