@@ -256,7 +256,6 @@ namespace KcpProject
         public const Int32 IKCP_LOG_OUT_ACK = 512;
         public const Int32 IKCP_LOG_OUT_PROBE = 1024;
         public const Int32 IKCP_LOG_OUT_WINS = 2048;
-        public const Int32 IKCP_LOG_FLUSH_TIME = 4096;
         public Int32 logmask;
 
         // create a new kcp control object, 'conv' must equal in two endpoint
@@ -343,7 +342,7 @@ namespace KcpProject
 
                 if (ikcp_canlog(IKCP_LOG_RECV))
                 {
-                    ikcp_log($"recv sn={seg.sn}");
+                    ikcp_log($"recv sn={seg.sn.ToString()}");
                 }
 
                 Segment.Put(seg);
@@ -616,7 +615,7 @@ namespace KcpProject
 
             if (ikcp_canlog(IKCP_LOG_INPUT))
             {
-                ikcp_log($"[RI] {size} bytes");
+                ikcp_log($"[RI] {size.ToString()} bytes");
             }
 
 
@@ -681,14 +680,14 @@ namespace KcpProject
 
                     if (ikcp_canlog(IKCP_LOG_IN_ACK))
                     {
-                        ikcp_log($" input ack: sn={sn} ts={ts} rtt={_itimediff(current, ts)} rto={rx_rto}");
+                        ikcp_log($" input ack: sn={sn.ToString()} ts={ts.ToString()} rtt={_itimediff(current, ts).ToString()} rto={rx_rto.ToString()}");
                     }
                 }
                 else if (IKCP_CMD_PUSH == cmd)
                 {
                     if (ikcp_canlog(IKCP_LOG_IN_DATA))
                     {
-                        ikcp_log($" input psh: sn={sn} ts={ts}");
+                        ikcp_log($" input psh: sn={sn.ToString()} ts={ts.ToString()}");
                     }
 
                     var repeat = true;
@@ -726,7 +725,7 @@ namespace KcpProject
                     // do nothing
                     if (ikcp_canlog(IKCP_LOG_IN_WINS))
                     {
-                        ikcp_log($" input wins: {wnd}");
+                        ikcp_log($" input wins: {wnd.ToString()}");
                     }
                 }
                 else
@@ -822,7 +821,7 @@ namespace KcpProject
                 {
                     if (ikcp_canlog(IKCP_LOG_OUTPUT))
                     {
-                        ikcp_log($"[RO] {writeIndex} bytes");
+                        ikcp_log($"[RO] {writeIndex.ToString()} bytes");
                     }
                     output(buffer, writeIndex);
                     writeIndex = reserved;
@@ -835,7 +834,7 @@ namespace KcpProject
                 {
                     if (ikcp_canlog(IKCP_LOG_OUTPUT))
                     {
-                        ikcp_log($"[RO] {writeIndex} bytes");
+                        ikcp_log($"[RO] {writeIndex.ToString()} bytes");
                     }
                     output(buffer, writeIndex);
                 }
@@ -854,7 +853,7 @@ namespace KcpProject
 
                     if (ikcp_canlog(IKCP_LOG_OUT_ACK))
                     {
-                        ikcp_log($"output ack: sn={seg.sn}");
+                        ikcp_log($"output ack: sn={seg.sn.ToString()}");
                     }
                 }
             }
@@ -1012,7 +1011,7 @@ namespace KcpProject
 
                     if (ikcp_canlog(IKCP_LOG_OUT_DATA))
                     {
-                        ikcp_log($"output psh: sn={segment.sn} ts={segment.ts} resendts={segment.resendts} rto={segment.rto} fastack={segment.fastack}, xmit={segment.xmit}");
+                        ikcp_log($"output psh: sn={segment.sn.ToString()} ts={segment.ts.ToString()} resendts={segment.resendts.ToString()} rto={segment.rto.ToString()} fastack={segment.fastack.ToString()}, xmit={segment.xmit.ToString()}");
                     }
                 }
 
@@ -1089,11 +1088,6 @@ namespace KcpProject
                 if (_itimediff(current, ts_flush) >= 0)
                     ts_flush = current + interval;
                 Flush(false);
-
-                if (ikcp_canlog(IKCP_LOG_FLUSH_TIME))
-                {
-                    ikcp_log($"flush time: {current}");
-                }
             }
         }
 
