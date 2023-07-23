@@ -863,6 +863,7 @@ namespace KcpProject
             if (ackOnly)
             {
                 flushBuffer();
+                Segment.Put(seg);
                 return interval;
             }
 
@@ -1058,6 +1059,7 @@ namespace KcpProject
                 }
             }
 
+            Segment.Put(seg);
             return (UInt32)minrto;
         }
 
