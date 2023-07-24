@@ -804,6 +804,32 @@ namespace KcpProject
             return 0;
         }
 
+        int makeSpace(int space, int writeIndex)
+        {
+            if (writeIndex + space > mtu)
+            {
+                if (ikcp_canlog(IKCP_LOG_OUTPUT))
+                {
+                    ikcp_log($"[RO] {writeIndex.ToString()} bytes");
+                }
+                output(buffer, writeIndex);
+                writeIndex = reserved;
+            }
+            return writeIndex;
+        }
+
+        void flushBuffer(int writeIndex)
+        {
+            if (writeIndex > reserved)
+            {
+                if (ikcp_canlog(IKCP_LOG_OUTPUT))
+                {
+                    ikcp_log($"[RO] {writeIndex.ToString()} bytes");
+                }
+                output(buffer, writeIndex);
+            }
+        }
+
         // flush pending data
         public UInt32 Flush(bool ackOnly)
         {
@@ -815,35 +841,10 @@ namespace KcpProject
 
             var writeIndex = reserved;
 
-            Action<int> makeSpace = (space) =>
-            {
-                if (writeIndex + space > mtu)
-                {
-                    if (ikcp_canlog(IKCP_LOG_OUTPUT))
-                    {
-                        ikcp_log($"[RO] {writeIndex.ToString()} bytes");
-                    }
-                    output(buffer, writeIndex);
-                    writeIndex = reserved;
-                }
-            };
-
-            Action flushBuffer = () =>
-            {
-                if (writeIndex > reserved)
-                {
-                    if (ikcp_canlog(IKCP_LOG_OUTPUT))
-                    {
-                        ikcp_log($"[RO] {writeIndex.ToString()} bytes");
-                    }
-                    output(buffer, writeIndex);
-                }
-            };
-
             // flush acknowledges
             for (var i = 0; i < acklist.Count; i++)
             {
-                makeSpace(KCP.IKCP_OVERHEAD);
+                writeIndex = makeSpace(KCP.IKCP_OVERHEAD, writeIndex);
                 var ack = acklist[i];
                 if ( _itimediff(ack.sn, rcv_nxt) >=0 || acklist.Count - 1 == i)
                 {
@@ -862,7 +863,7 @@ namespace KcpProject
             // flash remain ack segments
             if (ackOnly)
             {
-                flushBuffer();
+                flushBuffer(writeIndex);
                 Segment.Put(seg);
                 return interval;
             }
@@ -901,14 +902,14 @@ namespace KcpProject
             if ((probe & IKCP_ASK_SEND) != 0)
             {
                 seg.cmd = IKCP_CMD_WASK;
-                makeSpace(IKCP_OVERHEAD);
+                writeIndex = makeSpace(IKCP_OVERHEAD, writeIndex);
                 writeIndex += seg.encode(buffer, writeIndex);
             }
 
             if ((probe & IKCP_ASK_TELL) != 0)
             {
                 seg.cmd = IKCP_CMD_WINS;
-                makeSpace(IKCP_OVERHEAD);
+                writeIndex = makeSpace(IKCP_OVERHEAD, writeIndex);
                 writeIndex += seg.encode(buffer, writeIndex);
             }
 
@@ -1000,7 +1001,7 @@ namespace KcpProject
                     segment.una = seg.una;
 
                     var need = IKCP_OVERHEAD + segment.data.ReadableBytes;
-                    makeSpace(need);
+                    writeIndex = makeSpace(need, writeIndex);
                     writeIndex += segment.encode(buffer, writeIndex);
                     Buffer.BlockCopy(segment.data.RawBuffer, segment.data.ReaderIndex, buffer, writeIndex, segment.data.ReadableBytes);
                     writeIndex += segment.data.ReadableBytes;
@@ -1025,7 +1026,7 @@ namespace KcpProject
             }
 
             // flash remain segments
-            flushBuffer();
+            flushBuffer(writeIndex);
 
             // cwnd update
             if (nocwnd == 0)
